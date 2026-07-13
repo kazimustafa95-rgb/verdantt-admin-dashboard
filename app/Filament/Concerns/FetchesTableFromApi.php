@@ -43,13 +43,21 @@ trait FetchesTableFromApi
 
         $items = $this->fetchAllFromApi()->map(fn (array $item) => $modelClass::fromApi($item));
 
+        $rawPerPage = $this->getTableRecordsPerPage();
+        $perPage = is_numeric($rawPerPage) ? (int) $rawPerPage : 0;
+
+        if ($perPage < 1) {
+            // "all" (or any non-numeric option) — show every record on one page.
+            $perPage = max($items->count(), 1);
+        }
+
         return $this->cachedTableRecords = ApiTableData::paginate(
             $items,
             $this->getTableSearch(),
             $this->searchableFields(),
             $this->getTableSortColumn() ?? $this->defaultSortColumn(),
             $this->getTableSortDirection() ?? 'asc',
-            (int) ($this->getTableRecordsPerPage() ?: 10),
+            $perPage,
             $this->getTablePage(),
             fn (Collection $items) => $this->applyTableFiltersToApiItems($items),
         );
